@@ -5,7 +5,12 @@ import (
 	"net/http"
 )
 
-func JsonResponse(w http.ResponseWriter, data interface{}) {
+type Message struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+}
+
+func JsonResponse(w http.ResponseWriter, data interface{}, status int) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -14,15 +19,8 @@ func JsonResponse(w http.ResponseWriter, data interface{}) {
 
 	// Set the Content-Type header to application/json
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 
 	// Write the JSON response to the response writer
 	w.Write(jsonData)
-}
-
-func JsonRequest(w http.ResponseWriter, req *http.Request, data interface{}) {
-	err := json.NewDecoder(req.Body).Decode(data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 }

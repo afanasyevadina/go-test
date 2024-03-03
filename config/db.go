@@ -15,4 +15,5 @@ func ConnectDB() {
 	}
 	DB = db
 	DB.AutoMigrate(&models.Task{})
+	DB.AutoMigrate(&models.User{})
 }

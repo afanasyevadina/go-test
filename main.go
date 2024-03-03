@@ -7,11 +7,30 @@ import (
 	"net/http"
 )
 
+func apiMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Header.Set("Accept", "application/json")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func authMiddleware(next http.Handler) http.Handler {
+	return apiMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := config.Authenticate(r); err != nil {
+			util.JsonResponse(w, util.Message{
+				Status:  http.StatusUnauthorized,
+				Message: http.StatusText(http.StatusUnauthorized),
+			}, http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	}))
+}
+
 func main() {
 	config.ConnectDB()
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		util.JsonResponse(w, req.Header)
-	})
-	http.HandleFunc("/tasks", controllers.TasksList)
-	http.ListenAndServe(":8080", nil)
+	taskController := controllers.NewTaskController()
+	mux := http.NewServeMux()
+	mux.Handle("/api/tasks", authMiddleware(http.HandlerFunc(taskController.TasksList)))
+	http.ListenAndServe(":8080", mux)
 }
