@@ -30,7 +30,10 @@ func authMiddleware(next http.Handler) http.Handler {
 func main() {
 	config.ConnectDB()
 	taskController := controllers.NewTaskController()
+	authController := controllers.NewAuthController()
 	mux := http.NewServeMux()
+	mux.Handle("/api/login", apiMiddleware(http.HandlerFunc(authController.Login)))
+	mux.Handle("/api/register", apiMiddleware(http.HandlerFunc(authController.Register)))
 	mux.Handle("/api/tasks", authMiddleware(http.HandlerFunc(taskController.TasksList)))
 	http.ListenAndServe(":8080", mux)
 }
