@@ -1,12 +1,11 @@
 package controllers
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/afanasyevadina/go-test/config"
+	"github.com/afanasyevadina/go-test/dto"
 	"github.com/afanasyevadina/go-test/models"
 	"github.com/afanasyevadina/go-test/services"
-	"github.com/afanasyevadina/go-test/util"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"net/http"
@@ -14,83 +13,65 @@ import (
 
 func NewAuthController() AuthController {
 	return AuthController{
-		jwtService: services.JwtService{},
+		jwtService: services.GetJwtService(),
 	}
 }
 
 type AuthController struct {
-	jwtService services.JwtService
-}
-
-type Credentials struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type Token struct {
-	Token string `json:"token"`
+	jwtService *services.JwtService
 }
 
 func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
-	credentials := Credentials{}
-	err := json.NewDecoder(r.Body).Decode(&credentials)
-	if credentials.Email == "" || credentials.Password == "" {
-		util.JsonResponse(w, util.Message{
-			Status:  http.StatusUnprocessableEntity,
-			Message: http.StatusText(http.StatusUnprocessableEntity),
+	loginRequest := dto.LoginRequest{}
+	dto.FromRequest(r, &loginRequest)
+	if loginRequest.Email == "" || loginRequest.Password == "" {
+		dto.ToJsonResponse(w, dto.ValidationErrorResponse{
+			Errors: map[string]string{"email": "required", "password": "required"},
 		}, http.StatusUnprocessableEntity)
 		return
 	}
 	user := models.User{}
-	res := config.DB.Where("email = ?", credentials.Email).First(&user)
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credentials.Password)); err != nil || errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		util.JsonResponse(w, util.Message{
-			Status:  http.StatusUnauthorized,
-			Message: http.StatusText(http.StatusUnauthorized),
-		}, http.StatusUnauthorized)
+	res := config.DB.Where("email = ?", loginRequest.Email).First(&user)
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginRequest.Password)); err != nil || errors.Is(res.Error, gorm.ErrRecordNotFound) {
+		dto.RespondWith401(w)
 		return
 	}
 	token, err := c.jwtService.CreateToken(user.ID)
 	if err != nil {
-		util.JsonResponse(w, util.Message{
-			Status:  http.StatusBadRequest,
-			Message: http.StatusText(http.StatusBadRequest),
-		}, http.StatusBadRequest)
+		dto.RespondWith400(w)
 		return
 	}
-	util.JsonResponse(w, Token{token}, http.StatusOK)
+	dto.ToJsonResponse(w, dto.TokenResponse{
+		Token: token,
+	}, http.StatusOK)
 }
 
 func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
-	credentials := Credentials{}
-	err := json.NewDecoder(r.Body).Decode(&credentials)
-	if credentials.Email == "" || credentials.Password == "" {
-		util.JsonResponse(w, util.Message{
-			Status:  http.StatusUnprocessableEntity,
-			Message: http.StatusText(http.StatusUnprocessableEntity),
+	registerRequest := dto.RegisterRequest{}
+	dto.FromRequest(r, &registerRequest)
+	if registerRequest.Email == "" || registerRequest.Password == "" {
+		dto.ToJsonResponse(w, dto.ValidationErrorResponse{
+			Errors: map[string]string{"email": "required", "password": "required"},
 		}, http.StatusUnprocessableEntity)
 		return
 	}
-	user := models.User{Email: credentials.Email}
-	res := config.DB.Where("email = ?", credentials.Email).First(&user)
+	user := models.User{Email: registerRequest.Email, Name: registerRequest.Name}
+	res := config.DB.Where("email = ?", registerRequest.Email).First(&user)
 	if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		util.JsonResponse(w, util.Message{
-			Status:  http.StatusUnprocessableEntity,
-			Message: http.StatusText(http.StatusUnprocessableEntity),
+		dto.ToJsonResponse(w, dto.ValidationErrorResponse{
+			Errors: map[string]string{"email": "required", "password": "required"},
 		}, http.StatusUnprocessableEntity)
 		return
 	}
-	password, _ := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
+	password, _ := bcrypt.GenerateFromPassword([]byte(registerRequest.Password), bcrypt.DefaultCost)
 	user.Password = string(password)
 	config.DB.Save(&user)
 	token, err := c.jwtService.CreateToken(user.ID)
 	if err != nil {
-		util.JsonResponse(w, util.Message{
-			Status:  http.StatusBadRequest,
-			Message: http.StatusText(http.StatusBadRequest),
-		}, http.StatusBadRequest)
+		dto.RespondWith400(w)
 		return
 	}
-	util.JsonResponse(w, Token{token}, http.StatusOK)
+	dto.ToJsonResponse(w, dto.TokenResponse{
+		Token: token,
+	}, http.StatusOK)
 }

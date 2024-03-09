@@ -3,21 +3,26 @@ package services
 import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"strconv"
 	"time"
 )
 
-type JwtService struct{}
+type JwtService struct {
+	secret []byte
+}
 
-var secretKey = []byte("secret-key")
+func GetJwtService() *JwtService {
+	return &JwtService{[]byte("secret-key")}
+}
 
 func (s *JwtService) CreateToken(userId uint) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
-			"sub": userId,
+			"sub": strconv.Itoa(int(userId)),
 			"exp": time.Now().Add(time.Hour * 24).Unix(),
 		})
 
-	tokenString, err := token.SignedString(secretKey)
+	tokenString, err := token.SignedString(s.secret)
 	if err != nil {
 		return "", err
 	}
@@ -25,18 +30,20 @@ func (s *JwtService) CreateToken(userId uint) (string, error) {
 	return tokenString, nil
 }
 
-func (s *JwtService) VerifyToken(tokenString string) error {
+func (s *JwtService) ParseToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
+		return s.secret, nil
 	})
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if !token.Valid {
-		return fmt.Errorf("invalid token")
+		return nil, fmt.Errorf("invalid token")
 	}
 
-	return nil
+	claims := token.Claims.(jwt.MapClaims)
+
+	return claims, nil
 }

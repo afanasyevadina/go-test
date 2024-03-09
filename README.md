@@ -23,13 +23,18 @@
 │   └── db.go                 # Хранит и управляет глобальным подключением *gorm.DB
 ├── controllers               # Возможно, логика частично будет вынесена в репозитории
 │   ├── authController.go
+│   ├── profileController.go
 │   └── tasksController.go
+├── dto                       # Респонсы и реквесты
+│   ├── authDto.go
+│   ├── baseDto.go
+│   ├── message.go
+│   └── taskDto.go
+│   └── userDto.go
 ├── models
 │   ├── task.go
 │   └── user.go
 ├── services
 │   └── jwtService.go
-├── util
-│   └── util.go               # Всякие хелперы пока тут
 └── main.go                   # Роутинг пока тут, но возможно будет вынесет в конфиг
 ```

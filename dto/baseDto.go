@@ -1,16 +1,11 @@
-package util
+package dto
 
 import (
 	"encoding/json"
 	"net/http"
 )
 
-type Message struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
-}
-
-func JsonResponse(w http.ResponseWriter, data interface{}, status int) {
+func ToJsonResponse(w http.ResponseWriter, data interface{}, status int) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -23,4 +18,8 @@ func JsonResponse(w http.ResponseWriter, data interface{}, status int) {
 
 	// Write the JSON response to the response writer
 	w.Write(jsonData)
+}
+
+func FromRequest(r *http.Request, data interface{}) {
+	_ = json.NewDecoder(r.Body).Decode(data)
 }
