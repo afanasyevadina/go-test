@@ -8,6 +8,11 @@ type UserResponse struct {
 	Email string `json:"email"`
 }
 
+type UserRequest struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
 func UserResponseFromModel(user models.User) UserResponse {
 	return UserResponse{
 		ID:    user.ID,

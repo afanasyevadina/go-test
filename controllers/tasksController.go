@@ -19,15 +19,15 @@ func (c *TaskController) TasksList(w http.ResponseWriter, r *http.Request) {
 		c.StoreTask(w, r)
 	} else {
 		tasks := make([]models.Task, 0)
-		config.DB.Preload("User").Find(&tasks)
-		dto.ToJsonResponse(w, dto.TasksResponseFromModels(tasks), http.StatusOK)
+		config.DB.Preload("Author").Preload("Assignee").Find(&tasks)
+		dto.ToJsonResponse(w, dto.TasksResponseFromModels(tasks).Tasks, http.StatusOK)
 	}
 }
 
 func (c *TaskController) StoreTask(w http.ResponseWriter, r *http.Request) {
 	taskRequest := dto.TaskRequest{}
 	dto.FromRequest(r, &taskRequest)
-	task := models.Task{Title: taskRequest.Title, Status: models.StatusOpen, User: *config.CurrentUser}
+	task := models.Task{Title: taskRequest.Title, Description: taskRequest.Description, Status: models.StatusOpen, Author: *config.CurrentUser}
 	config.DB.Create(&task)
 	dto.ToJsonResponse(w, dto.TaskResponseFromModel(task), http.StatusCreated)
 }

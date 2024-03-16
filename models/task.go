@@ -15,8 +15,11 @@ const (
 
 type Task struct {
 	gorm.Model
-	Title  string     `json:"title"`
-	Status TaskStatus `json:"status"`
-	UserID int        `json:"-"`
-	User   User       `json:"user"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Status      TaskStatus `json:"status"`
+	AuthorID    int        `json:"-"`
+	Author      User       `json:"author"`
+	AssigneeID  int        `json:"-"`
+	Assignee    User       `json:"assignee"`
 }

@@ -7,10 +7,12 @@ type TasksResponse struct {
 }
 
 type TaskResponse struct {
-	ID     uint              `json:"id"`
-	Title  string            `json:"title"`
-	Status models.TaskStatus `json:"status"`
-	User   taskUserResponse  `json:"user"`
+	ID          uint              `json:"id"`
+	Title       string            `json:"title"`
+	Description string            `json:"description"`
+	Status      models.TaskStatus `json:"status"`
+	Author      taskUserResponse  `json:"author"`
+	Assignee    taskUserResponse  `json:"assignee"`
 }
 
 type taskUserResponse struct {
@@ -19,17 +21,23 @@ type taskUserResponse struct {
 }
 
 type TaskRequest struct {
-	Title string `json:"title"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
 }
 
 func TaskResponseFromModel(task models.Task) TaskResponse {
 	return TaskResponse{
-		ID:     task.ID,
-		Title:  task.Title,
-		Status: task.Status,
-		User: taskUserResponse{
-			ID:   task.User.ID,
-			Name: task.User.Name,
+		ID:          task.ID,
+		Title:       task.Title,
+		Description: task.Description,
+		Status:      task.Status,
+		Author: taskUserResponse{
+			ID:   task.Author.ID,
+			Name: task.Author.Name,
+		},
+		Assignee: taskUserResponse{
+			ID:   task.Assignee.ID,
+			Name: task.Assignee.Name,
 		},
 	}
 }
