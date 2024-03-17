@@ -11,7 +11,7 @@ type JwtService struct {
 	secret []byte
 }
 
-func GetJwtService() *JwtService {
+func NewJwtService() *JwtService {
 	return &JwtService{[]byte("secret-key")}
 }
 

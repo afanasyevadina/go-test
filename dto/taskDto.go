@@ -20,8 +20,8 @@ type taskUserResponse struct {
 	Name string `json:"name"`
 }
 
-type TaskRequest struct {
-	Title       string `json:"title"`
+type TaskCreateRequest struct {
+	Title       string `json:"title" validate:"required"`
 	Description string `json:"description"`
 }
 
@@ -50,4 +50,8 @@ func TasksResponseFromModels(tasks []models.Task) TasksResponse {
 		response.Tasks = append(response.Tasks, TaskResponseFromModel(t))
 	}
 	return response
+}
+
+func (req TaskCreateRequest) ToModel() models.Task {
+	return models.Task{Title: req.Title, Description: req.Description}
 }

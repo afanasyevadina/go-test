@@ -1,6 +1,9 @@
 package dto
 
-import "github.com/afanasyevadina/go-test/models"
+import (
+	"github.com/afanasyevadina/go-test/config"
+	"github.com/afanasyevadina/go-test/models"
+)
 
 type UserResponse struct {
 	ID    uint   `json:"id"`
@@ -8,9 +11,9 @@ type UserResponse struct {
 	Email string `json:"email"`
 }
 
-type UserRequest struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+type UserUpdateRequest struct {
+	Name  string `json:"name" validate:"required"`
+	Email string `json:"email" validate:"required,email"`
 }
 
 func UserResponseFromModel(user models.User) UserResponse {
@@ -19,4 +22,9 @@ func UserResponseFromModel(user models.User) UserResponse {
 		Name:  user.Name,
 		Email: user.Email,
 	}
+}
+
+func (req UserUpdateRequest) ToCurrentUser() {
+	(*config.CurrentUser).Email = req.Email
+	(*config.CurrentUser).Name = req.Name
 }

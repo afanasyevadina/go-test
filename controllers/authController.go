@@ -1,38 +1,36 @@
 package controllers
 
 import (
-	"errors"
-	"github.com/afanasyevadina/go-test/config"
 	"github.com/afanasyevadina/go-test/dto"
-	"github.com/afanasyevadina/go-test/models"
+	"github.com/afanasyevadina/go-test/repositories"
 	"github.com/afanasyevadina/go-test/services"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
+	"github.com/go-playground/validator/v10"
 	"net/http"
 )
 
 func NewAuthController() AuthController {
 	return AuthController{
-		jwtService: services.GetJwtService(),
+		jwtService:     services.NewJwtService(),
+		userRepository: repositories.NewUserRepository(),
+		validator:      validator.New(validator.WithRequiredStructEnabled()),
 	}
 }
 
 type AuthController struct {
-	jwtService *services.JwtService
+	jwtService     *services.JwtService
+	userRepository *repositories.UserRepository
+	validator      *validator.Validate
 }
 
 func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 	loginRequest := dto.LoginRequest{}
 	dto.FromRequest(r, &loginRequest)
-	if loginRequest.Email == "" || loginRequest.Password == "" {
-		dto.ToJsonResponse(w, dto.ValidationErrorResponse{
-			Errors: map[string]string{"email": "required", "password": "required"},
-		}, http.StatusUnprocessableEntity)
+	if err := c.validator.Struct(loginRequest); err != nil {
+		dto.ToJsonResponse(w, dto.ResponseFromValidator(err.(validator.ValidationErrors)), http.StatusUnprocessableEntity)
 		return
 	}
-	user := models.User{}
-	res := config.DB.Where("email = ?", loginRequest.Email).First(&user)
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginRequest.Password)); err != nil || errors.Is(res.Error, gorm.ErrRecordNotFound) {
+	user, err := c.userRepository.LoginByEmail(loginRequest.Email, loginRequest.Password)
+	if err != nil {
 		dto.RespondWith401(w)
 		return
 	}
@@ -49,23 +47,16 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	registerRequest := dto.RegisterRequest{}
 	dto.FromRequest(r, &registerRequest)
-	if registerRequest.Email == "" || registerRequest.Password == "" {
-		dto.ToJsonResponse(w, dto.ValidationErrorResponse{
-			Errors: map[string]string{"email": "required", "password": "required"},
-		}, http.StatusUnprocessableEntity)
+	err := c.validator.Struct(registerRequest)
+	if err := c.validator.Struct(registerRequest); err != nil {
+		dto.ToJsonResponse(w, dto.ResponseFromValidator(err.(validator.ValidationErrors)), http.StatusUnprocessableEntity)
 		return
 	}
-	user := models.User{Email: registerRequest.Email, Name: registerRequest.Name}
-	res := config.DB.Where("email = ?", registerRequest.Email).First(&user)
-	if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		dto.ToJsonResponse(w, dto.ValidationErrorResponse{
-			Errors: map[string]string{"email": "required", "password": "required"},
-		}, http.StatusUnprocessableEntity)
+	user, err := c.userRepository.Create(registerRequest.ToModel())
+	if err != nil {
+		dto.ToJsonResponse(w, dto.ValidationErrorResponse{Errors: map[string]string{"email": err.Error()}}, http.StatusUnprocessableEntity)
 		return
 	}
-	password, _ := bcrypt.GenerateFromPassword([]byte(registerRequest.Password), bcrypt.DefaultCost)
-	user.Password = string(password)
-	config.DB.Save(&user)
 	token, err := c.jwtService.CreateToken(user.ID)
 	if err != nil {
 		dto.RespondWith400(w)

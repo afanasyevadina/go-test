@@ -21,7 +21,7 @@ func Authenticate(r *http.Request) error {
 }
 
 func tryToken(token string) error {
-	claims, err := services.GetJwtService().ParseToken(token)
+	claims, err := services.NewJwtService().ParseToken(token)
 	subject, err := claims.GetSubject()
 	if err != nil {
 		return err
